@@ -7,12 +7,14 @@
 //
 
 import Foundation
-import UIKit
-import iAd
 import Reachability
 import AdSupport
 import AppTrackingTransparency
 import AdServices
+#if os(iOS)
+    import iAd
+    import UIKit
+#endif
 
 class SKSyncServiceImplementation: SKSyncService {
   
@@ -55,10 +57,12 @@ class SKSyncServiceImplementation: SKSyncService {
     // and need to try execute all pending commands ASAP
     SKServiceRegistry.commandStore.resetFireDateAndRetryCountForPendingCommands()
     
-    let notificationCenter = NotificationCenter.default
-    notificationCenter.addObserver(self, selector: #selector(willResignActiveNotification), name: UIApplication.willResignActiveNotification, object: nil)
-    notificationCenter.addObserver(self, selector: #selector(willEnterForegroundNotification), name: UIApplication.willEnterForegroundNotification, object: nil)
-    notificationCenter.addObserver(self, selector: #selector(didBecomeActiveNotification), name: UIApplication.didBecomeActiveNotification, object: nil)
+    #if os(iOS)
+      let notificationCenter = NotificationCenter.default
+      notificationCenter.addObserver(self, selector: #selector(willResignActiveNotification), name: UIApplication.willResignActiveNotification, object: nil)
+      notificationCenter.addObserver(self, selector: #selector(willEnterForegroundNotification), name: UIApplication.willEnterForegroundNotification, object: nil)
+      notificationCenter.addObserver(self, selector: #selector(didBecomeActiveNotification), name: UIApplication.didBecomeActiveNotification, object: nil)
+    #endif
   }
   
   func syncAllCommands() {
@@ -117,69 +121,73 @@ class SKSyncServiceImplementation: SKSyncService {
             SKServiceRegistry.storeKitService.requestProductInfoAndSendPurchase(command: command)
           }
         case .automaticSearchAds:
-          if #available(iOS 14.3, *) {
-            DispatchQueue.global(qos: .default).async {
-              do {
-                let token = try AAAttribution.attributionToken()
-                DispatchQueue.main.async {
-                  SkarbSDK.sendSource(broker: .saaapi,
-                                      features: ["saatoken": token],
-                                      brokerUserID: nil)
-                }
-                command.changeStatus(to: .done)
-              }
-              catch {
-                command.updateRetryCountAndFireDate()
-                command.changeStatus(to: .pending)
-              }
-              SKServiceRegistry.commandStore.saveCommand(command)
-            }
-          }
-          else {
-            DispatchQueue.main.async {
-              ADClient.shared().requestAttributionDetails ({ (attributionJSON, error) in
-                guard error == nil else {
-                  command.updateRetryCountAndFireDate()
-                  command.changeStatus(to: .pending)
+            #if os(iOS)
+              if #available(iOS 14.3, *) {
+                DispatchQueue.global(qos: .default).async {
+                  do {
+                    let token = try AAAttribution.attributionToken()
+                    DispatchQueue.main.async {
+                      SkarbSDK.sendSource(broker: .saaapi,
+                                          features: ["saatoken": token],
+                                          brokerUserID: nil)
+                    }
+                    command.changeStatus(to: .done)
+                  }
+                  catch {
+                    command.updateRetryCountAndFireDate()
+                    command.changeStatus(to: .pending)
+                  }
                   SKServiceRegistry.commandStore.saveCommand(command)
-                  return
                 }
-                
-                if let attributionJSON = attributionJSON {
-                  SkarbSDK.sendSource(broker: .searchads,
-                                      features: attributionJSON,
-                                      brokerUserID: nil)
+              }
+              else {
+                DispatchQueue.main.async {
+                  ADClient.shared().requestAttributionDetails ({ (attributionJSON, error) in
+                    guard error == nil else {
+                      command.updateRetryCountAndFireDate()
+                      command.changeStatus(to: .pending)
+                      SKServiceRegistry.commandStore.saveCommand(command)
+                      return
+                    }
+                    
+                    if let attributionJSON = attributionJSON {
+                      SkarbSDK.sendSource(broker: .searchads,
+                                          features: attributionJSON,
+                                          brokerUserID: nil)
+                    }
+                    command.changeStatus(to: .done)
+                    SKServiceRegistry.commandStore.saveCommand(command)
+                  })
                 }
-                command.changeStatus(to: .done)
-                SKServiceRegistry.commandStore.saveCommand(command)
-              })
-            }
-          }
+              }
+            #endif
         case .fetchIdfa:
           command.changeStatus(to: .done)
           SKServiceRegistry.commandStore.saveCommand(command)
-          if #available(iOS 14, *) {
-            guard ATTrackingManager.trackingAuthorizationStatus == .authorized else {
-              return
-            }
-          } else if !ASIdentifierManager.shared().isAdvertisingTrackingEnabled {
-            return
-          }
-          let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
-          let idfaRequest = Installapi_IDFARequest(idfa: idfa)
-          let idfaCommand = SKCommand(commandType: .idfaV4,
-                                      status: .pending,
-                                      data: idfaRequest.getData())
-          SKServiceRegistry.commandStore.saveCommand(idfaCommand)
-          
-        // also need to set for all other fetchIDFACommands "done" status
-        // no need to send twice idfa to the server
-          let notDoneIDFACommands = SKServiceRegistry.commandStore.getAllCommands(by: .fetchIdfa).filter { $0.status != .done }
-          for idfaCommands in notDoneIDFACommands {
-            var editCommand = idfaCommands
-            editCommand.changeStatus(to: .done)
-            SKServiceRegistry.commandStore.saveCommand(idfaCommand)
-          }
+          #if os(iOS)
+              if #available(iOS 14, *) {
+                guard ATTrackingManager.trackingAuthorizationStatus == .authorized else {
+                  return
+                }
+              } else if !ASIdentifierManager.shared().isAdvertisingTrackingEnabled {
+                return
+              }
+              let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
+              let idfaRequest = Installapi_IDFARequest(idfa: idfa)
+              let idfaCommand = SKCommand(commandType: .idfaV4,
+                                          status: .pending,
+                                          data: idfaRequest.getData())
+              SKServiceRegistry.commandStore.saveCommand(idfaCommand)
+              
+            // also need to set for all other fetchIDFACommands "done" status
+            // no need to send twice idfa to the server
+              let notDoneIDFACommands = SKServiceRegistry.commandStore.getAllCommands(by: .fetchIdfa).filter { $0.status != .done }
+              for idfaCommands in notDoneIDFACommands {
+                var editCommand = idfaCommands
+                editCommand.changeStatus(to: .done)
+                SKServiceRegistry.commandStore.saveCommand(idfaCommand)
+              }
+          #endif
       }
     }
   }

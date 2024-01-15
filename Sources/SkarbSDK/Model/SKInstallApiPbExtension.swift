@@ -7,9 +7,11 @@
 //
 
 import Foundation
-import UIKit
 import AdSupport
 import SwiftProtobuf
+#if os(iOS)
+  import UIKit
+#endif
 
 extension Installapi_DeviceRequest: SKCodableStruct {
   
@@ -18,7 +20,11 @@ extension Installapi_DeviceRequest: SKCodableStruct {
     auth = Auth_Auth.createDefault()
     installID = SkarbSDK.getDeviceId()
     idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
-    idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
+    #if os(iOS)
+      idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
+    #elseif os(macOS)
+      idfv = ""
+    #endif
     bundleVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
     if let preferredLanguage = Locale.preferredLanguages.first {
       locale = preferredLanguage
@@ -33,7 +39,13 @@ extension Installapi_DeviceRequest: SKCodableStruct {
       return identifier + String(UnicodeScalar(UInt8(value)))
     }
     device = identifier
+    #if os(iOS)
     osVer = UIDevice.current.systemVersion
+    #elseif os (macOS)
+      let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+      let versionString = osVersion.majorVersion.description + "." + osVersion.minorVersion.description + "." + osVersion.patchVersion.description
+      osVer = versionString
+    #endif
     let appStoreReceiptURL = Bundle.main.appStoreReceiptURL
     if let appStoreReceiptURL = appStoreReceiptURL {
       receiptURL = appStoreReceiptURL.absoluteString

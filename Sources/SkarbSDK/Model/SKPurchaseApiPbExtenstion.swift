@@ -7,9 +7,11 @@
 //
 
 import Foundation
-import UIKit
 import AdSupport
 import SwiftProtobuf
+#if os(iOS)
+  import UIKit
+#endif
 
 extension Purchaseapi_TransactionsRequest: SKCodableStruct {
   
@@ -88,7 +90,11 @@ extension Purchaseapi_ReceiptRequest: SKCodableStruct {
     installID = SkarbSDK.getDeviceId()
     transactions = newTransactions
     idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
-    idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
+    #if os(iOS)
+      idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
+    #elseif os(macOS)
+      idfv = ""
+    #endif
     let appStoreReceiptURL = Bundle.main.appStoreReceiptURL
     if let appStoreReceiptURL = appStoreReceiptURL {
       receiptURL = appStoreReceiptURL.absoluteString

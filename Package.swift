@@ -7,6 +7,7 @@ let package = Package(
   name: "SkarbSDK",
   platforms: [
     .iOS("11.3"),
+    .macOS("13.0")
   ],
   products: [
     .library(
@@ -30,7 +31,6 @@ let package = Package(
       linkerSettings: [
         .linkedFramework("Foundation"),
         .linkedFramework("AdSupport"),
-        .linkedFramework("UIKit"),
         .linkedFramework("StoreKit"),
         .linkedFramework("AdServices"),
         .linkedFramework("AppTrackingTransparency")
