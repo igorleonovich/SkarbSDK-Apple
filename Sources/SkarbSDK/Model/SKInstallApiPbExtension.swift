@@ -23,7 +23,7 @@ extension Installapi_DeviceRequest: SKCodableStruct {
     #if os(iOS)
       idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
     #elseif os(macOS)
-      idfv = ""
+      idfv = SKTools.getUniqueMachineIdentifier() ?? ""
     #endif
     bundleVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
     if let preferredLanguage = Locale.preferredLanguages.first {
@@ -360,4 +360,3 @@ extension Installapi_IDFARequest: SKCodableStruct {
     case idfa
   }
 }
-
