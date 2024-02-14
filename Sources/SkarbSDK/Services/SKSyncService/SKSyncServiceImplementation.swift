@@ -14,6 +14,8 @@ import AdServices
 #if os(iOS)
     import iAd
     import UIKit
+#elseif os(macOS)
+    import AppKit
 #endif
 
 class SKSyncServiceImplementation: SKSyncService {
@@ -62,6 +64,11 @@ class SKSyncServiceImplementation: SKSyncService {
       notificationCenter.addObserver(self, selector: #selector(willResignActiveNotification), name: UIApplication.willResignActiveNotification, object: nil)
       notificationCenter.addObserver(self, selector: #selector(willEnterForegroundNotification), name: UIApplication.willEnterForegroundNotification, object: nil)
       notificationCenter.addObserver(self, selector: #selector(didBecomeActiveNotification), name: UIApplication.didBecomeActiveNotification, object: nil)
+      #elseif os(macOS)
+      let notificationCenter = NotificationCenter.default
+      notificationCenter.addObserver(self, selector: #selector(willResignActiveNotification), name: NSApplication.willResignActiveNotification, object: nil)
+      notificationCenter.addObserver(self, selector: #selector(willEnterForegroundNotification), name: NSApplication.willBecomeActiveNotification, object: nil)
+      notificationCenter.addObserver(self, selector: #selector(didBecomeActiveNotification), name: NSApplication.didBecomeActiveNotification, object: nil)
     #endif
   }
   
