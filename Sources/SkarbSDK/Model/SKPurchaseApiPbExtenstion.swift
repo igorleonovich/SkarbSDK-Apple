@@ -93,7 +93,7 @@ extension Purchaseapi_ReceiptRequest: SKCodableStruct {
     #if os(iOS)
       idfv = UIDevice.current.identifierForVendor?.uuidString ?? ""
     #elseif os(macOS)
-      idfv = SKTools.getUniqueMachineIdentifier() ?? ""
+      idfv = SKTools.getMacAddress() ?? ""
     #endif
     let appStoreReceiptURL = Bundle.main.appStoreReceiptURL
     if let appStoreReceiptURL = appStoreReceiptURL {
