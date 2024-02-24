@@ -7,7 +7,7 @@ let package = Package(
   name: "SkarbSDK",
   platforms: [
     .iOS("11.3"),
-    .macOS("13.0")
+    .macOS("12.0")
   ],
   products: [
     .library(
